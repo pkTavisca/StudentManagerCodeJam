@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.IO;
+using Newtonsoft.Json;
 
 namespace InitiateProgram
 {
     class Program
     {
         private static List<Student> listOfStudents;
-        private static DirectoryInfo directory = new DirectoryInfo(@"d:\StudentData");
+        private static string directoryPath = @"d:\StudentData\";
+        private static DirectoryInfo directory = new DirectoryInfo(directoryPath);
         private static StreamWriter logWriter;
 
         static void Main(string[] args)
@@ -28,10 +28,10 @@ namespace InitiateProgram
             int choice = 0;
             while (choice != -1)
             {
-                Console.WriteLine("What do you want to do?\n1.Add a new student\n2.View all records\n3.View a record" +
+                Console.WriteLine("\nWhat do you want to do?\n1.Add a new student\n2.View all records\n3.View a record" +
                     "\n4.Update a record\n5.View log");
                 int.TryParse(Console.ReadLine(), out choice);
-
+                Console.WriteLine();
                 switch (choice)
                 {
                     case 1:
@@ -225,17 +225,9 @@ namespace InitiateProgram
                 break;
             }
 
-            using (StreamWriter sw = new StreamWriter(@"d:\StudentData\" + student.GetFullName() + ".txt"))
+            using (var file = File.Create(@"d:\StudentData\" + student.GetFullName() + ".txt"))
             {
-                sw.WriteLine(student.FirstName);
-                sw.WriteLine(student.LastName);
-                sw.WriteLine(student.MobileNo);
-                sw.WriteLine(student.EmailId);
-                sw.WriteLine(student.Address);
-                sw.WriteLine(student.DateOfBirth.ToString("ddMMyyyy"));
-                sw.WriteLine(student.CourseTitle);
-                sw.WriteLine(student.MentorName);
-                sw.WriteLine(student.EmergencyCotact);
+                File.WriteAllText(directoryPath + student.GetFullName() + ".txt", JsonConvert.SerializeObject(student));
             }
 
             listOfStudents.Add(student);
