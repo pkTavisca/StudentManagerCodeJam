@@ -12,6 +12,7 @@ namespace InitiateProgram
         private static string directoryPath = @"d:\StudentData\";
         private static DirectoryInfo directory = new DirectoryInfo(directoryPath);
         private static StreamWriter logWriter;
+        private static string logPath = directoryPath + "logs.log";
 
         static void Main(string[] args)
         {
@@ -34,52 +35,31 @@ namespace InitiateProgram
                 Console.WriteLine();
                 switch (choice)
                 {
+                    //adding a student
                     case 1:
                         if (AddStudent())
                         {
                             Console.WriteLine("Student added successfully.");
                         }
                         break;
+
+                    //displaying all records
                     case 2:
                         foreach (var student in listOfStudents)
                         {
-                            Console.WriteLine(student.ToString());
+                            Console.WriteLine("\n" + student.ToString());
                         }
-                        logWriter = File.AppendText(@"d:\StudentData\logs.log");
-                        logWriter.WriteLine("{0}:Displayed all students information.", DateTime.Now.ToString());
-                        logWriter.Close();
+
+                        WriteToLog("\nDisplayed all students information.");
                         break;
+
+                    //displaying a particular record
                     case 3:
                         while (true)
                         {
                             Console.Write("Enter Student's full name: ");
                             string fullName = Console.ReadLine();
-                            if (!Regex.IsMatch(fullName, "^[a-zA-Z]+ [a-zA-Z]$"))
-                            {
-                                Console.WriteLine("Invalid name.");
-                                continue;
-                            }
-                            foreach (var student in listOfStudents)
-                            {
-                                if (student.GetFullName().Equals(fullName))
-                                {
-                                    Console.WriteLine(student.ToString());
-                                }
-                                break;
-                            }
-                            Console.WriteLine("Student not found.");
-                            logWriter = File.AppendText(@"d:\StudentData\logs.log");
-                            logWriter.WriteLine("{1}:Tried to access records of student: {0}", fullName, DateTime.Now.ToString());
-                            logWriter.Close();
-                            break;
-                        }
-                        break;
-                    case 4:
-                        while (true)
-                        {
-                            Console.Write("Enter Student's full name: ");
-                            string fullName = Console.ReadLine();
-                            if (!Regex.IsMatch(fullName, "^[a-zA-Z]+ [a-zA-Z]$"))
+                            if (!Student.IsNameValid(fullName))
                             {
                                 Console.WriteLine("Invalid name.");
                                 continue;
@@ -89,9 +69,35 @@ namespace InitiateProgram
                             {
                                 if (student.GetFullName().Equals(fullName))
                                 {
-                                    DeleteStudent(fullName);
-                                    listOfStudents.Remove(student);
-                                    if (AddStudent())
+                                    Console.WriteLine(student.ToString());
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found)
+                                Console.WriteLine("Student not found.");
+                            WriteToLog(string.Format("Tried to access records of student: {0}. {1}", fullName, found ? "Success" : "Failure"));
+                            break;
+                        }
+                        break;
+
+                    //updating a student's record
+                    case 4:
+                        while (true)
+                        {
+                            Console.Write("Enter Student's full name: ");
+                            string fullName = Console.ReadLine();
+                            if (!Student.IsNameValid(fullName))
+                            {
+                                Console.WriteLine("Invalid name.");
+                                continue;
+                            }
+                            bool found = false;
+                            foreach (var student in listOfStudents)
+                            {
+                                if (student.GetFullName().Equals(fullName))
+                                {
+                                    if (UpdateStudent(student))
                                     {
                                         Console.WriteLine("Student Updated successfully.");
                                     }
@@ -101,14 +107,13 @@ namespace InitiateProgram
                             }
                             if (!found)
                                 Console.WriteLine("Student not found.");
-                            logWriter = File.AppendText(@"d:\StudentData\logs.log");
-                            logWriter.WriteLine("{1}:Updated records of student: {0}", fullName, DateTime.Now.ToString());
-                            logWriter.Close();
                             break;
                         }
                         break;
+
+                    //displying all logs
                     case 5:
-                        using (StreamReader sr = new StreamReader(@"d:\StudentData\logs.log"))
+                        using (StreamReader sr = new StreamReader(logPath))
                         {
                             string line;
                             while ((line = sr.ReadLine()) != null)
@@ -117,6 +122,7 @@ namespace InitiateProgram
                             }
                         }
                         break;
+
                     default:
                         Console.WriteLine("Invalid choice.");
                         break;
@@ -128,12 +134,138 @@ namespace InitiateProgram
 
         }
 
-        private static void DeleteStudent(string fullName)
+        private static bool UpdateStudent(Student student)
         {
-            File.Delete(@"d:\StudentData\" + fullName);
-            logWriter = File.AppendText(@"d:\StudentData\logs.log");
-            logWriter.WriteLine("{1}:Deleted file of student: {0}", fullName, DateTime.Now.ToString());
-            logWriter.Close();
+            int choice = -1;
+            while (choice != 0)
+            {
+                Console.WriteLine("What do you want to update? Enter 0 to Exit.\n1.Name\n2.Mobile Number\n" +
+                    "3.Email Id\n4.Address\n5.Date of Birth" +
+                    "\n6.Course Tile\n7.Mentor's Name\n8.Emergency Contact");
+                int.TryParse(Console.ReadLine(), out choice);
+
+                switch (choice)
+                {
+                    case 1:
+                        string prevName = student.GetFullName();
+                        string fullName = Console.ReadLine();
+                        if (Student.IsNameValid(fullName))
+                        {
+                            student.FirstName = fullName.Split(' ')[0];
+                            student.LastName = fullName.Split(' ')[1];
+                            WriteStudentToFile(student);
+                            WriteToLog(string.Format("Updated name of {0} to {1}", prevName, fullName));
+                            Console.WriteLine("Updated name of {0} to {1}", prevName, fullName);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Name.");
+                            continue;
+                        }
+                        break;
+                    case 2:
+                        string prevMob = student.MobileNo;
+                        string mobile = Console.ReadLine();
+                        if (Student.IsMobileNoValid(mobile))
+                        {
+                            student.MobileNo = mobile;
+                            WriteStudentToFile(student);
+                            WriteToLog(string.Format("Updated mobile number from {0} to {1}", prevMob, mobile));
+                            Console.WriteLine("Updated mobile number from {0} to {1}", prevMob, mobile);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Mobile Number.");
+                            continue;
+                        }
+                        break;
+                    case 3:
+                        string prevEmail = student.EmailId;
+                        string email = Console.ReadLine();
+                        if (Student.IsEmailValid(email))
+                        {
+                            student.EmailId = email;
+                            WriteStudentToFile(student);
+                            WriteToLog(string.Format("Updated email from {0} to {1}", prevEmail, email));
+                            Console.WriteLine("Updated email from {0} to {1}", prevEmail, email);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Email.");
+                            continue;
+                        }
+                        break;
+                    case 4:
+                        string prevAddress = student.Address;
+                        string address = Console.ReadLine();
+                        student.Address = address;
+                        WriteStudentToFile(student);
+                        WriteToLog(string.Format("Updated address from {0} to {1}", prevAddress, address));
+                        Console.WriteLine("Updated address from {0} to {1}", prevAddress, address);
+                        break;
+                    case 5:
+                        DateTime prevDob = student.DateOfBirth;
+                        string dob = Console.ReadLine();
+                        if (Student.IsDateValid(dob))
+                        {
+                            student.DateOfBirth = DateTime.ParseExact(dob, "ddMMyyyy", System.Globalization.CultureInfo.InvariantCulture);
+                            WriteStudentToFile(student);
+                            WriteToLog(string.Format("Updated date of birth from {0} to {1}", prevDob, dob));
+                            Console.WriteLine("Updated date of birth from {0} to {1}", prevDob, dob);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Date of Birth.");
+                            continue;
+                        }
+                        break;
+                    case 6:
+                        string prevCourse = student.CourseTitle;
+                        string newCourse = Console.ReadLine();
+                        student.CourseTitle = newCourse;
+                        WriteStudentToFile(student);
+                        WriteToLog(string.Format("Updated course from {0} to {1}", prevCourse, newCourse));
+                        Console.WriteLine("Updated course from {0} to {1}", prevCourse, newCourse);
+                        break;
+                    case 7:
+                        string prevMentor = student.MentorName;
+                        string mentor = Console.ReadLine();
+                        if (Student.IsNameValid(mentor))
+                        {
+                            student.MentorName = mentor;
+                            WriteStudentToFile(student);
+                            WriteToLog(string.Format("Updated name of mentor from {0} to {1}", prevMentor, mentor));
+                            Console.WriteLine("Updated name of mentor from {0} to {1}", prevMentor, mentor);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Mentor's Name.");
+                            continue;
+                        }
+                        break;
+                    case 8:
+                        string prevEmerNo = student.EmergencyCotact;
+                        string emerNo = Console.ReadLine();
+                        if (Student.IsMobileNoValid(emerNo))
+                        {
+                            student.EmergencyCotact = emerNo;
+                            WriteStudentToFile(student);
+                            WriteToLog(string.Format("Updated emergency contact from {0} to {1}", prevEmerNo, emerNo));
+                            Console.WriteLine("Updated emergency contact from {0} to {1}", prevEmerNo, emerNo);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Mobile Number.");
+                            continue;
+                        }
+                        break;
+                    default:
+                        Console.WriteLine("Invalid Choice.");
+                        break;
+                }
+            }
+
+            return true;
         }
 
         private static bool AddStudent()
@@ -143,7 +275,7 @@ namespace InitiateProgram
             {
                 Console.Write("Enter student's full name: ");
                 string fullName = Console.ReadLine();
-                if (!Regex.IsMatch(fullName, "^[a-zA-Z]+ [a-zA-Z]+$"))
+                if (!Student.IsNameValid(fullName))
                 {
                     Console.WriteLine("Invalid name.");
                     continue;
@@ -164,7 +296,7 @@ namespace InitiateProgram
             {
                 Console.Write("Enter student's mobile Number: ");
                 string mobileNo = Console.ReadLine();
-                if (!Regex.IsMatch(mobileNo, "^[0-9]{5,10}$"))
+                if (!Student.IsMobileNoValid(mobileNo))
                 {
                     Console.WriteLine("Invalid mobile number.");
                     continue;
@@ -176,7 +308,7 @@ namespace InitiateProgram
             {
                 Console.Write("Enter student's e-mail id: ");
                 string mail = Console.ReadLine();
-                if (!Regex.IsMatch(mail, @"^[a-zA-Z0-9]+@[a-zA-Z0-9]+\.[a-z]{2,3}$"))
+                if (!Student.IsEmailValid(mail))
                 {
                     Console.WriteLine("Invalid e-mail id.");
                     continue;
@@ -190,7 +322,7 @@ namespace InitiateProgram
             {
                 Console.Write("Enter student's DOB (ddMMyyyy)");
                 string dob = Console.ReadLine();
-                if (!Regex.IsMatch(dob, @"^[0-3][0-9][01][0-9][12][0-9]{3}$"))
+                if (!Student.IsDateValid(dob))
                 {
                     Console.WriteLine("Invalid date of birth");
                     continue;
@@ -204,7 +336,7 @@ namespace InitiateProgram
             {
                 Console.Write("Enter student's mentor's name: ");
                 string mentor = Console.ReadLine();
-                if (!Regex.IsMatch(mentor, "^[a-zA-Z]+ [a-zA-Z]+$"))
+                if (!Student.IsNameValid(mentor))
                 {
                     Console.WriteLine("Invalid Name.");
                     continue;
@@ -216,7 +348,7 @@ namespace InitiateProgram
             {
                 Console.Write("Enter student's emergency contact number: ");
                 string mobileNo = Console.ReadLine();
-                if (!Regex.IsMatch(mobileNo, "^[0-9]{5,10}$"))
+                if (!Student.IsMobileNoValid(mobileNo))
                 {
                     Console.WriteLine("Invalid mobile number.");
                     continue;
@@ -225,16 +357,20 @@ namespace InitiateProgram
                 break;
             }
 
-            using (var file = File.Create(@"d:\StudentData\" + student.GetFullName() + ".txt"))
+            WriteStudentToFile(student);
+
+            listOfStudents.Add(student);
+            WriteToLog(string.Format("Added a student - {0}", student.GetFullName()));
+
+            return true;
+        }
+
+        private static void WriteStudentToFile(Student student)
+        {
+            using (var file = File.Create(directoryPath + student.GetFullName() + ".txt"))
             {
                 File.WriteAllText(directoryPath + student.GetFullName() + ".txt", JsonConvert.SerializeObject(student));
             }
-
-            listOfStudents.Add(student);
-            logWriter = File.AppendText(@"d:\StudentData\logs.log");
-            logWriter.WriteLine("{1}:Added a student - {0}", student.GetFullName(), DateTime.Now.ToString());
-            logWriter.Close();
-            return true;
         }
 
         private static void InitializeListOfStudents()
@@ -245,17 +381,18 @@ namespace InitiateProgram
                 using (StreamReader sr = new StreamReader(@"d:\StudentData\" + file.Name))
                 {
                     Student student = new Student();
-                    student.FirstName = sr.ReadLine();
-                    student.LastName = sr.ReadLine();
-                    student.MobileNo = sr.ReadLine();
-                    student.EmailId = sr.ReadLine();
-                    student.Address = sr.ReadLine();
-                    student.DateOfBirth = DateTime.ParseExact(sr.ReadLine(), "ddMMyyyy", System.Globalization.CultureInfo.InvariantCulture);
-                    student.CourseTitle = sr.ReadLine();
-                    student.MentorName = sr.ReadLine();
-                    student.EmergencyCotact = sr.ReadLine();
+                    string contents = File.ReadAllText(directoryPath + file.Name);
+                    student = JsonConvert.DeserializeObject<Student>(contents);
                     listOfStudents.Add(student);
                 }
+            }
+        }
+
+        private static void WriteToLog(string log)
+        {
+            using (logWriter = File.AppendText(logPath))
+            {
+                logWriter.WriteLine("{0}:{1}", DateTime.Now.ToString(), log);
             }
         }
     }
