@@ -9,7 +9,7 @@ namespace InitiateProgram
     class Program
     {
         private static List<Student> listOfStudents;
-        private static string directoryPath = @"d:\StudentData\";
+        private static string directoryPath = @"c:\StudentData\";
         private static DirectoryInfo directory = new DirectoryInfo(directoryPath);
         private static StreamWriter logWriter;
         private static string logPath = directoryPath + "logs.log";
@@ -151,6 +151,7 @@ namespace InitiateProgram
                         string fullName = Console.ReadLine();
                         if (Student.IsNameValid(fullName))
                         {
+                            DeleteStudent(student);
                             student.FirstName = fullName.Split(' ')[0];
                             student.LastName = fullName.Split(' ')[1];
                             WriteStudentToFile(student);
@@ -268,6 +269,12 @@ namespace InitiateProgram
             return true;
         }
 
+        private static void DeleteStudent(Student student)
+        {
+            File.Delete(directoryPath + student.GetFullName() + ".txt");
+            WriteToLog(string.Format("Deleted record of {0}",student.GetFullName()));
+        }
+
         private static bool AddStudent()
         {
             Student student = new Student();
@@ -367,10 +374,7 @@ namespace InitiateProgram
 
         private static void WriteStudentToFile(Student student)
         {
-            using (var file = File.Create(directoryPath + student.GetFullName() + ".txt"))
-            {
-                File.WriteAllText(directoryPath + student.GetFullName() + ".txt", JsonConvert.SerializeObject(student));
-            }
+            File.WriteAllText(directoryPath + student.GetFullName() + ".txt", JsonConvert.SerializeObject(student));
         }
 
         private static void InitializeListOfStudents()
@@ -378,10 +382,10 @@ namespace InitiateProgram
             FileInfo[] files = directory.GetFiles("*.txt", SearchOption.TopDirectoryOnly);
             foreach (var file in files)
             {
-                using (StreamReader sr = new StreamReader(@"d:\StudentData\" + file.Name))
+                using (StreamReader sr = new StreamReader(file.FullName))
                 {
                     Student student = new Student();
-                    string contents = File.ReadAllText(directoryPath + file.Name);
+                    string contents = sr.ReadLine();
                     student = JsonConvert.DeserializeObject<Student>(contents);
                     listOfStudents.Add(student);
                 }
